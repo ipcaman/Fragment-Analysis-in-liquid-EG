@@ -164,13 +164,13 @@ for {set f 0} {$f < $nf} {incr f 5} {
                         set ang_bab [measure angle $bond_angleba]
                                  
         
-                        if {(($ang_abb >= 140) && ($rab <= 2.40)) || (($ang_bab >= 140) && ($rba <= 2.40))} {
+                        if {(($ang_abb >= 150) && ($rab <= 2.30)) || (($ang_bab >= 150) && ($rba <= 2.30))} {
                             lappend h_bonded_dimer $indob1_orig
                             lappend h_bonded_dimer_act $indob1
                             break
                         }
                     }
-                    if {(($ang_abb >= 140) && ($rab <= 2.40)) || (($ang_bab >= 140) && ($rba <= 2.40))} {
+                    if {(($ang_abb >= 150) && ($rab <= 2.30)) || (($ang_bab >= 150) && ($rba <= 2.30))} {
                         break
                     }
   
