@@ -1,5 +1,5 @@
 # tcl script to provide input data for SOM
-# Steps - 1: To build different fragments of EG molecules in liquid state; trimers, tetramers and pentamers 
+# Steps - 1: To build different fragments of EG molecules in liquid state; dimers, trimers, tetramers and pentamers 
 #         2: For the corresponding fragment save its dihedral angle values, frame information and indexes of molecules involved
 #         3: Save the coordinates of all the atoms forming the selected fragment 
 
@@ -8,8 +8,13 @@
 # input required for the following procedure: indexes of the molecules forming the fragment along with the respective frame.  
 proc dihed {frame args} {
     set mer {}
+    # for dimers 
+    if {[llength [lindex $args 0]] == 2} {
+    set fp1 [open "dimers_frames_mol.dat" "a"]
+    set fp2 [open "dimers_dihedrals.dat" "a"]
+    set fp3 [open "dimers_pax.dat" "a"]
     # for trimers 
-    if {[llength [lindex $args 0]] == 3} {
+    } elseif {[llength [lindex $args 0]] == 3} {
     set fp1 [open "trimers_frames_mol.dat" "a"]
     set fp2 [open "trimers_dihedrals.dat" "a"]
     set fp3 [open "trimers_pax.dat" "a"]
@@ -24,10 +29,10 @@ proc dihed {frame args} {
     set fp2 [open "pentamers_dihedrals.dat" "a"]
     set fp3 [open "pentamers_pax.dat" "a"]
     #for pentamers
-    } elseif {[llength [lindex $args 0]] == 6} {
-    set fp1 [open "hexamers_frames_mol.dat" "a"]
-    set fp2 [open "hexamers_dihedrals.dat" "a"]
-    set fp3 [open "hexamers_pax.dat" "a"]
+    #} elseif {[llength [lindex $args 0]] == 6} {
+    #set fp1 [open "hexamers_frames_mol.dat" "w"]
+    #set fp2 [open "hexamers_dihedrals.dat" "w"]
+    #set fp3 [open "hexamers_pax.dat" "w"]
     }
 
     foreach oxy $args {
@@ -68,13 +73,13 @@ proc dihed {frame args} {
     #to get the atomic coordinates
     set pax [[atomselect top "same fragment as index [lrange [lindex $args 0] 0 end]"] get {x y z}]   
     #dumping frame and molecular indexes in file fp1 
-    puts $fp1 "$frame $args"
+    puts  $fp1 "$frame $args"
     #fp2 contains dihedral angle information for the corresponding fragment
-    puts $fp2 "$mer"
+    puts  $fp2 "$mer"
 
     foreach pac $pax { 
        #dumping atomic coordinates in fp3 
-       puts $fp3 "[format "%.2f" [lindex $pac 0]] [format "%.2f" [lindex $pac 1]] [format "%.2f" [lindex $pac 2]]" 
+       puts  $fp3 "[format "%.2f" [lindex $pac 0]] [format "%.2f" [lindex $pac 1]] [format "%.2f" [lindex $pac 2]]" 
     }    
     close $fp1
     close $fp2
@@ -164,13 +169,13 @@ for {set f 0} {$f < $nf} {incr f 5} {
                         set ang_bab [measure angle $bond_angleba]
                                  
         
-                        if {(($ang_abb >= 150) && ($rab <= 2.30)) || (($ang_bab >= 150) && ($rba <= 2.30))} {
+                        if {(($ang_abb >= 140) && ($rab <= 2.40)) || (($ang_bab >= 140) && ($rba <= 2.40))} {
                             lappend h_bonded_dimer $indob1_orig
                             lappend h_bonded_dimer_act $indob1
                             break
                         }
                     }
-                    if {(($ang_abb >= 150) && ($rab <= 2.30)) || (($ang_bab >= 150) && ($rba <= 2.30))} {
+                    if {(($ang_abb >= 140) && ($rab <= 2.40)) || (($ang_bab >= 140) && ($rba <= 2.40))} {
                         break
                     }
   
@@ -185,7 +190,8 @@ for {set f 0} {$f < $nf} {incr f 5} {
 
 
 #procedure to map the indexes of atoms outside the box to their cooresponding indexes within the box; required to avoid double-counting
-  proc act_orig {act_ind} {
+
+proc act_orig {act_ind} {
     global ind_orig
     set orig_ind {}
     foreach ind $act_ind {
@@ -203,7 +209,37 @@ for {set f 0} {$f < $nf} {incr f 5} {
   global ind_orig
 
 
+#picking up the dimer fragment
+# Picking up the Trimer fragment
+  set dimer {}
+  set dimer_act {}
 
+
+  foreach cluster $h_bonded cluster_act $h_bonded_act {
+        set m [llength $cluster]
+        if {[llength $cluster] > 1} {
+            for {set i 1} {$i < $m} {incr i} {
+                    lappend dimer  [lsort "[lindex $cluster 0]  [lindex $cluster $i]"]
+                    lappend dimer_act  "[lindex $cluster_act 0]  [lindex $cluster_act $i]"
+                }
+            }
+        }
+
+  
+  set uniq_dimer [lsort -unique $dimer] 
+  set dimer_ans {}
+
+# Taking only the unique ones
+  foreach di $uniq_dimer {
+    set ind_dimer [lsearch -exact $dimer $di]
+    lappend dimer_ans [lindex $dimer_act [lindex $ind_dimer 0]]
+  }
+  #puts "dimers = [llength $trimer_ans]"
+
+# calling the procedure dihed
+  foreach ans1 $dimer_ans {
+     dihed $f  "$ans1"
+ }
 
 # Picking up the Trimer fragment
   set trimer {}
@@ -230,11 +266,13 @@ for {set f 0} {$f < $nf} {incr f 5} {
     set ind_trimer [lsearch -exact $trimer $tri]
     lappend trimer_ans [lindex $trimer_act [lindex $ind_trimer 0]]
   }
-  puts "trimers = [llength $trimer_ans]"
+  #puts "trimers = [llength $trimer_ans]"
 
 # calling the procedure dihed
   foreach ans1 $trimer_ans {
+    if {[llength [lsort -unique $ans1]] == 3} {
      dihed $f  "$ans1"
+    }
   }
 
 
@@ -270,6 +308,7 @@ for {set f 0} {$f < $nf} {incr f 5} {
 #tetramer from b
     set bpair [lindex $h_bonded [lsearch -exact $element $b]]
     set bpair_act [lindex $h_bonded_act [lsearch -exact $element $b_act]]
+
     set lenb [llength $bpair]
     if {$lenb > 2} {
         if {[llength $bpair] == [llength $bpair_act]} {
@@ -286,6 +325,7 @@ for {set f 0} {$f < $nf} {incr f 5} {
 
     set cpair [lindex $h_bonded [lsearch -exact $element $c]]
     set cpair_act [lindex $h_bonded_act [lsearch -exact $element $c_act]]
+
     set lenc [llength $cpair]
 
     if {$lenc > 2} {
@@ -309,13 +349,14 @@ for {set f 0} {$f < $nf} {incr f 5} {
     set ind_tet [lsearch -exact $tetramer $tet]
     lappend tetra_ans [lindex $tetramer_act [lindex $ind_tet 0]]
   }
-  puts "tetramers = [llength $tetra_ans]"
+  #puts "tetramers = [llength $tetra_ans]"
 
 # calling the procedure dihed
   foreach ans2 $tetra_ans {
+    if {[llength [lsort -unique $ans2]] == 4} {
     dihed $f  "$ans2"
    }
-
+}
 
 
 # Building Pentamers from tetramers by adding of one EG molecule in all possible ways 
@@ -402,10 +443,14 @@ for {set f 0} {$f < $nf} {incr f 5} {
     lappend penta_ans [lindex $pentamer_act [lindex $ind_pent 0]]
   }
 
-  puts "pentamers = [llength $penta_ans]"
+  #puts "pentamers = [llength $penta_ans]"
 
   # calling the procedure dihed
   foreach ans3 $penta_ans {
+    if {[llength [lsort -unique $ans3]] == 5} {
     dihed $f  "$ans3"
+    }
   }
 }
+
+
